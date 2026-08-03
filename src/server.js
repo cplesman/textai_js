@@ -7,6 +7,7 @@ const PORT = 3200;
 app.use(express.json({ limit: "2mb" }));
 
 let aiCache = {};
+const gModelPath = 'models/';
 
 function validateModelPath(modelPath) {
   if (!modelPath || typeof modelPath !== "string" || modelPath.trim().length === 0) {
@@ -22,12 +23,12 @@ function validateModelPath(modelPath) {
 async function validateModel(model, reset) {
   validateModelPath(model);
   let ai = aiCache[model];
-  const modelPath = '../models/' + model;
   if(reset) {
     ai = aiCache[model] = new TextCategoryAI();
   }
   else if(!ai) {
-    ai = await TextCategoryAI.loadModel(modelPath); //load or create new model if not exists
+    ai = await TextCategoryAI.loadModel(gModelPath + model); //load or create new model if not exists
+    aiCache[model] = ai;
   }
   return ai;
 }
@@ -108,13 +109,25 @@ function asyncHandler(handler) {
   };
 }
 
-app.get("/health", (_req, res) => {
-  let model = _req.query.model;
-  validateModelPath(model);
+app.get("/health", async (_req, res) => {
+  let { model, all } = _req.query;
+  if (!model || all) {
+    res.json({
+      ok: true,
+      cachedModels: Object.keys(aiCache),
+    });
+    return;
+  }
+  const ai = await validateModel(model);
   res.json({
     ok: true,
     port: PORT,
-    modelTrained: aiCache[model]?.trained,
+    labelDocCounts: Object.fromEntries(ai.labelDocCounts),
+    labelTokenTotals: Object.fromEntries(ai.labelTokenTotals),
+    labelWordCounts: Object.fromEntries(
+      [...ai.labelWordCounts.entries()].map(([label, counts]) => [label, Object.fromEntries(counts)]),
+    ),
+    modelTrained: ai.trained,
   });
 });
 
@@ -227,12 +240,24 @@ app.post("/save", asyncHandler(async (req, res) => {
   const { model } = req.body || {};
 
   const ai = await validateModel(model, false);
-  const modelPath = '../models/' + model;
-  const savedPath = await ai.saveModel(modelPath);
+  const savedPath = await ai.saveModel(gModelPath + model);
 
   res.json({
     message: "Model saved.",
     modelPath: savedPath,
+  });
+}));
+
+app.get("/models", asyncHandler(async (_req, res) => {
+  const modelDir = 'models/';
+  const fs = require("fs");
+  const path = require("path");
+  const models = fs.existsSync(path.resolve(modelDir))
+    ? fs.readdirSync(path.resolve(modelDir)).filter((file) => file.endsWith(".json"))
+    : [];
+
+  res.json({
+    models,
   });
 }));
 
