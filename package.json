@@ -1,0 +1,26 @@
+{
+  "name": "textai-js",
+  "version": "1.0.0",
+  "description": "Paragraph text classifier for labels 0-63 with save/load support",
+  "main": "src/classifier.js",
+  "type": "commonjs",
+  "scripts": {
+    "train": "node src/cli.js train",
+    "predict": "node src/cli.js predict",
+    "demo": "node src/demo.js",
+    "test": "node --test",
+    "server": "node src/server.js",
+    "dev:server": "node --watch src/server.js"
+  },
+  "keywords": [
+    "nlp",
+    "text-classification",
+    "bayes",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
