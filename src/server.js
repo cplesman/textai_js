@@ -118,12 +118,22 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.delete("/clearcache", asyncHandler(async (req, res) => {
+app.post("/clearcache", asyncHandler(async (req, res) => {
+    //this will save and clear the cache for the model or all models if all is true
   const { model,all } = req.body || {};
   validateModelPath(model);
+  const modelPath = '../models/';
   if (all) {
+    let aiKeys = Object.keys(aiCache);
+    for(let i=0;i<aiKeys.length;i++) {
+      const key = aiKeys[i];
+      const path = modelPath + key;
+      await aiCache[key].saveModel(path);
+    }
     aiCache = {};
   } else {
+    const ai = aiCache[model];
+    await ai.saveModel(modelPath + model);
     delete aiCache[model];
   }
   res.json({

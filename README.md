@@ -49,6 +49,8 @@ The output is a single integer label.
 npm run demo
 ```
 
+The demo reads December 2025 transactions from the `account` collection in Firestore using `gridtow-firebase-adminsdk-tmexq-59ab2e1150.json`, trains an account model, saves it to `models/account-model.json`, and reloads it.
+
 ## Tests
 
 ```bash
