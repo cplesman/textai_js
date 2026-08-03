@@ -59,10 +59,10 @@ function validateSamples(samples, fieldName) {
   }
 }
 
-function evaluateSamples(model, samples) {
+async function evaluateSamples(model, samples) {
   validateSamples(samples, "samples");
 
-  const ai = aiCache[model];
+  const ai = await validateModel(model, false);
   if (!ai || !ai.trained) {
     throw new Error("No trained model is loaded. Call /train or /load first.");
   }
@@ -77,12 +77,7 @@ function evaluateSamples(model, samples) {
       correct += 1;
     }
 
-    return {
-      index,
-      expected,
-      predicted,
-      matches,
-    };
+    return predicted;
   });
 
   const total = samples.length;
@@ -202,7 +197,7 @@ app.post("/batch-train", asyncHandler(async (req, res) => {
 
 app.post("/evaluate", asyncHandler(async (req, res) => {
   const { model, samples } = req.body || {};
-  const evaluation = evaluateSamples(model, samples);
+  const evaluation = await evaluateSamples(model, samples);
 
   res.json({
     message: "Evaluation complete.",
@@ -217,17 +212,17 @@ app.post("/batch-evaluate", asyncHandler(async (req, res) => {
     throw new Error("batches must be a non-empty array.");
   }
 
-  const evaluations = batches.map((batch, index) => {
+  const evaluations = await Promise.all(batches.map(async (batch, index) => {
     const name = isNonEmptyString(batch?.name) ? batch.name : `batch-${index}`;
     const samples = batch?.samples;
-    const summary = evaluateSamples(model, samples);
+    const summary = await evaluateSamples(model, samples);
 
     return {
       name,
       batchIndex: index,
       ...summary,
     };
-  });
+  }));
 
   res.json({
     message: "Batch evaluation complete.",
