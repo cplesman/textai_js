@@ -4,7 +4,7 @@ const { TextCategoryAI, assertValidLabel } = require("./classifier");
 const app = express();
 const PORT = 3200;
 
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "50mb" }));
 
 let aiCache = {};
 const gModelPath = 'models/';
@@ -258,4 +258,36 @@ app.get("/models", asyncHandler(async (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`TextCategoryAI API server listening on port ${PORT}`);
+});
+
+let isShuttingDown = false;
+process.on("SIGINT", async () => {
+  console.log("Received SIGINT. Saving models and shutting down...");
+  if(isShuttingDown) {
+    console.log("Already shutting down. Please wait...");
+    return;
+  }
+  isShuttingDown = true;
+  let modelKeys = Object.keys(aiCache);
+  for (let i = 0; i < modelKeys.length; i++) {
+    const key = modelKeys[i];
+    const path = gModelPath + key;
+    await aiCache[key].saveModel(path);
+  }
+  aiCache = {};
+});
+process.on("SIGTERM", async () => {
+  console.log("Received SIGTERM. Saving models and shutting down...");
+  if(isShuttingDown) {
+    console.log("Already shutting down. Please wait...");
+    return;
+  }
+  isShuttingDown = true;
+  let modelKeys = Object.keys(aiCache);
+  for (let i = 0; i < modelKeys.length; i++) {
+    const key = modelKeys[i];
+    const path = gModelPath + key;
+    await aiCache[key].saveModel(path);
+  }
+  aiCache = {};
 });
